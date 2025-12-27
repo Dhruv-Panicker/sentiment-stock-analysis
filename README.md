@@ -1,25 +1,295 @@
-# Sentiment-Driven Stock Movement Prediction
+# Sentiment-Driven Stock Price Movement Prediction
 
-Analyzing the relationship between Twitter sentiment and stock price movements using machine learning.
+A machine learning project that analyzes Twitter sentiment data to predict stock price movements for major tech stocks (TSLA, AMD, NIO).
 
-## Status: Phase 1 - Data Discovery
+## 📊 Project Overview
 
-Currently: **Exploring Kaggle datasets to understand data structure**
+This project implements a complete machine learning pipeline that:
+- Collects and analyzes 80,000+ tweets about tech stocks
+- Performs sentiment analysis using VADER sentiment analyzer
+- Engineers features including rolling averages, momentum, and lag indicators
+- Trains ensemble machine learning models (Linear Regression, Random Forest, XGBoost)
+- Deploys predictions via a production-ready FastAPI REST API
+- Provides Docker containerization for easy deployment
 
-## Quick Start
+### Prerequisites
+- Python 3.13+
+- pip or conda
+- Docker (optional, for containerization)
 
+### Local Installation
+
+1. **Clone the repository**
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Start with data exploration
-jupyter notebook notebooks/01_data_exploration.ipynb
+git clone https://github.com/yourusername/sentiment-stock-analysis.git
+cd sentiment-stock-analysis
 ```
 
-## Folders
+2. **Create virtual environment**
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-- `data/raw/` - Raw datasets go here
-- `notebooks/` - Analysis notebooks
-- `src/` - Python modules (built as we learn the data)
-- `results/` - Outputs
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Start the API server**
+```bash
+python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+
+5. **Access the API**
+- API Docs (Swagger): http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- Health Check: http://localhost:8000/health
+
+## 📡 API Endpoints
+
+### System Endpoints
+
+**Health Check**
+```bash
+GET /health
+```
+Returns API status and model availability.
+
+**Model Information**
+```bash
+GET /model_info
+```
+Returns available tickers, model type, features, and input requirements.
+
+### Prediction Endpoints
+
+**Single Stock Prediction**
+```bash
+POST /predict
+Content-Type: application/json
+
+{
+  "ticker": "TSLA",
+  "sentiment_mean": 0.65,
+  "sentiment_momentum": 0.12
+}
+```
+
+
+**Batch Predictions**
+```bash
+POST /predict_batch
+Content-Type: application/json
+
+{
+  "predictions": [
+    {
+      "ticker": "TSLA",
+      "sentiment_mean": 0.65,
+      "sentiment_momentum": 0.12
+    },
+    {
+      "ticker": "AMD",
+      "sentiment_mean": 0.42,
+      "sentiment_momentum": -0.05
+    },
+    {
+      "ticker": "NIO",
+      "sentiment_mean": 0.78,
+      "sentiment_momentum": 0.25
+    }
+  ]
+}
+```
+
+## Testing
+
+Run the comprehensive test suite (17 test cases covering health checks, predictions, batch predictions, error handling, and validation):
+
+```bash
+pytest tests/test_api.py -v
+```
+
+Test coverage includes:
+- ✅ Health check endpoint
+- ✅ Model info endpoint
+- ✅ Single prediction with valid/invalid inputs
+- ✅ Batch predictions with valid/empty lists
+- ✅ Sentiment range validation
+- ✅ Ticker validation
+- ✅ Missing field handling
+- ✅ Error responses
+
+## Project Phases
+
+### Phase 1: Data Exploration
+- Collected 80,000+ tweets about TSLA, AMD, NIO
+- Analyzed tweet distribution and sentiment patterns
+- Identified data quality issues and outliers
+
+### Phase 2: Feature Engineering
+- Sentiment Analysis: VADER sentiment scores (-1 to 1 scale)
+- Temporal Features: Lag features (1, 3, 5 day lookback)
+- Rolling Statistics: Moving averages, momentum indicators
+- Feature Scaling: StandardScaler normalization per ticker
+
+### Phase 3: Model Training
+- **Models Tested:**
+  - Linear Regression (baseline)
+  - Random Forest (best performer)
+  - XGBoost (gradient boosting)
+  
+- **Results:**
+  - Random Forest: Best R² and lowest RMSE
+  - Feature importance: sentiment_mean > sentiment_momentum
+
+### Phase 4: Multi-Stock Ensemble
+- Trained separate Random Forest models for each stock
+- Applied ensemble approach combining predictions
+- Backtesting validation on historical data
+- Model artifacts saved as pickle files
+
+### Phase 5: Production Deployment
+- FastAPI REST API with 4 endpoints
+- Pydantic request/response validation
+- Prediction interpretation with human-readable output
+- CORS middleware for cross-origin requests
+- Comprehensive error handling
+- Full test suite with 17 test cases
+- Docker containerization (Dockerfile + docker-compose.yml)
+- CLI inference tool for batch processing
+
+
+## Input Features
+
+The model expects two normalized sentiment features:
+
+| Feature | Range | Description |
+|---------|-------|-------------|
+| `sentiment_mean` | -1.0 to 1.0 | Average sentiment score from tweets |
+| `sentiment_momentum` | -1.0 to 1.0 | Day-to-day change in sentiment |
+
+Scores are generated by:
+1. Collecting tweets about the stock
+2. Running VADER sentiment analysis
+3. Computing mean and momentum metrics
+4. Normalizing to [-1, 1] range
+
+## Model Performance
+
+**Random Forest Model (Selected)**
+- Handles non-linear relationships
+- Robust to outliers
+- Feature importance interpretability
+- Per-ticker specialized models (TSLA, AMD, NIO)
+
+**Confidence Levels**
+- **High**: |prediction| > 2.0% (strong signal)
+- **Medium**: 1.0% < |prediction| ≤ 2.0% (moderate signal)
+- **Low**: |prediction| ≤ 1.0% (weak signal)
+
+## Docker Deployment
+
+### Using Docker Compose (Recommended)
+```bash
+docker-compose up
+```
+
+### Using Docker CLI
+```bash
+docker build -t sentiment-stock-analysis .
+docker run -p 8000:8000 sentiment-stock-analysis
+```
+
+## Dependencies
+
+Key Python packages:
+- `fastapi` - Modern web framework
+- `uvicorn` - ASGI server
+- `pydantic` - Data validation
+- `scikit-learn` - Machine learning models
+- `pandas` - Data manipulation
+- `numpy` - Numerical computing
+- `nltk` - NLP & sentiment analysis
+- `pytest` - Testing framework
+- `httpx` - HTTP client for testing
+
+See `requirements.txt` for complete list with pinned versions.
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+HOST=0.0.0.0
+PORT=8000
+DEBUG=False
+MODELS_DIR=models
+LOG_LEVEL=INFO
+```
+
+## API Documentation
+
+Interactive API documentation automatically generated by FastAPI:
+
+- **Swagger UI** (ReDoc): http://localhost:8000/docs
+- **Alternative ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON Schema**: http://localhost:8000/openapi.json
+
+
+### cURL Examples
+```bash
+# Health check
+curl http://localhost:8000/health | python -m json.tool
+
+# Single prediction
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "TSLA",
+    "sentiment_mean": 0.65,
+    "sentiment_momentum": 0.12
+  }' | python -m json.tool
+
+# Batch prediction
+curl -X POST http://localhost:8000/predict_batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "predictions": [
+      {"ticker": "TSLA", "sentiment_mean": 0.65, "sentiment_momentum": 0.12},
+      {"ticker": "AMD", "sentiment_mean": 0.42, "sentiment_momentum": -0.05},
+      {"ticker": "NIO", "sentiment_mean": 0.78, "sentiment_momentum": 0.25}
+    ]
+  }' | python -m json.tool
+```
+
+## Monitoring & Logging
+
+The application includes comprehensive logging:
+
+- **INFO**: Standard operational messages
+- **ERROR**: Exception and error details
+- **DEBUG**: Detailed debugging information (when enabled)
+
+Check logs via uvicorn output or configure additional logging handlers.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+
+## 📄 License
+
+This project is licensed under the MIT License - see LICENSE file for details.
+
+## 👤 Author
+
+Dhruv Panicker
+
+
 

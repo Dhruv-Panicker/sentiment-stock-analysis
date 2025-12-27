@@ -64,3 +64,9 @@ env/
 results/
 logs/
 *.log
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
